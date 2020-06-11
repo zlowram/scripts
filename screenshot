@@ -1,0 +1,59 @@
+#!/bin/bash
+
+SCRIPT_NAME=$(basename $0)
+
+function help {
+	echo -e "usage: ${SCRIPT_NAME} [-h] [-a] [-c] [-s]"
+	echo -e "\nHelp documentation for ${SCRIPT_NAME}:\n"
+	echo -e "-h, --help         Show this message"
+	echo -e "-a, --all          Capture the whole screen and save it to ~/Pictures"
+	echo -e "-s, --selection    Capture the the selected area and save it to ~/Pictures"
+	echo -e "-c, --clipboard    Copy capture to clipboard. Can be used in conjuntion with the other options"
+	echo ""
+	exit 1
+}
+
+OPTS=$(getopt -o h,a,c,s --long help,all,clipboard,selection -- "$@")
+
+# Option parsing failed
+if [ $? -ne 0 ]; then
+	help
+fi
+
+eval set -- "$OPTS"
+
+# Process options
+while true; do
+	case "$1" in
+		-h|--help)
+			help
+			shift ;;
+		-a|--all)
+			ALL=1
+			shift ;;
+		-s|--selection)
+			SELECTION=1
+			shift ;;
+		-c|--clipboard)
+			CLIPBOARD=1
+			shift ;;
+		*)
+			break ;;
+	esac
+done
+
+if [ ! -z $ALL ]; then
+	if [ ! -z $CLIPBOARD ]; then
+		maim | xclip -selection clipboard -t image/png
+	else
+		maim ~/Pictures/screenshot-$(date +%s).png
+	fi
+fi
+
+if  [ ! -z $SELECTION ]; then
+	if [ ! -z $CLIPBOARD ]; then
+		maim -s | xclip -selection clipboard -t image/png
+	else
+		maim -s ~/Pictures/screenshot-$(date +%s).png
+	fi
+fi

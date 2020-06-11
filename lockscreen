@@ -1,0 +1,6 @@
+#!/bin/bash
+
+maim /tmp/lockscreen.png; \
+convert /tmp/lockscreen.png -blur 0x5 /tmp/lockscreen_blur.png; \
+slock -i /tmp/lockscreen_blur.png; \
+rm /tmp/lockscreen*.png

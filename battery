@@ -1,0 +1,50 @@
+#!/bin/bash
+
+SCRIPT_NAME=$(basename $0)
+
+function help {
+	echo -e "usage: ${SCRIPT_NAME}"
+	echo -e "\nHelp documentation for ${SCRIPT_NAME}:\n"
+	echo -e "-h, --help         Show this message"
+	echo -e "-s, --status       Show whether battery is charging or discharging"
+	echo -e "-c, --charge       Show current battery charge percentage"
+	echo ""
+	exit 1
+}
+
+BATTERY_FULL=$(cat /sys/class/power_supply/BAT0/energy_full)
+BATTERY_NOW=$(cat /sys/class/power_supply/BAT0/energy_now)
+CHARGING=$(cat /sys/class/power_supply/AC/online)
+
+OPTS=$(getopt -o h,c,s --long help,charge,status -- "$@")
+
+# Option parsing failed
+if [ $? -ne 0 ]; then
+	help
+fi
+
+eval set -- "$OPTS"
+
+while true; do
+	case $1 in
+		-h|--help)
+			help
+			shift ;;
+		-c|--charge)
+			charge=$(bc <<< "scale=2; ${BATTERY_NOW}/${BATTERY_FULL}*100")
+			echo "${charge%.*}%"
+			exit 0
+			;;
+		-s|--status)
+			if [ "$CHARGING" -eq 1 ]; then
+				echo "charging"
+			else
+				echo "discharging"
+			fi
+			exit 0
+			;;
+		*)
+			help
+			break ;;
+	esac
+done

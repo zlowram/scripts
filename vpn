@@ -1,0 +1,76 @@
+#!/bin/bash
+
+VPN_PROFILES_PATH=/home/z/etc/vpns
+VPN_CLIENT_FILENAME="client.ovpn"
+VPN_ACTIVE_PROFILE_FILE=/var/log/openvpn_active_profile
+
+SCRIPT_NAME=$(basename $0)
+
+function help {
+	echo -e "usage: ${SCRIPT_NAME} [-h] [-u profile_name ] [-d] [-s] [-l]"
+	echo -e "\nHelp documentation for ${SCRIPT_NAME}:\n"
+	echo -e "-h, --help         Show this message"
+	echo -e "-u, --up           Connect to specified VPN"
+	echo -e "-d, --down         Disconnect from any connected VPN"
+	echo -e "-s, --status       See VPN status"
+	echo -e "-l, --list         List available VPN profiles"
+	echo ""
+	exit 1
+}
+
+OPTS=$(getopt -o h,u:,d,s,l --long help,up:,down,status,list -- "$@")
+
+# Option parsing failed
+if [ $? -ne 0 ]; then
+	help
+fi
+
+eval set -- "$OPTS"
+
+# Process options
+while true; do
+	case "$1" in
+		-h|--help)
+			help
+			shift ;;
+
+		-u|--up)
+			VPN_PROFILE=$2
+
+			if [ $(pgrep openvpn) ]; then
+				echo "The following VPN profile is already active: \"$(cat $VPN_ACTIVE_PROFILE_FILE)\""
+				exit 1
+			fi
+
+			if [ -f $VPN_PROFILES_PATH/$VPN_PROFILE/$VPN_CLIENT_FILENAME ]; then
+				sudo openvpn --config $VPN_PROFILES_PATH/$VPN_PROFILE/$VPN_CLIENT_FILENAME --daemon
+				echo $VPN_PROFILE | sudo tee -a $VPN_ACTIVE_PROFILE_FILE > /dev/null
+				exit 0
+			else
+				echo "VPN profile \"$VPN_PROFILE\" does not exist"
+				exit 1
+			fi
+			;;
+
+		-d|--down)
+			sudo killall openvpn &> /dev/null
+			sudo rm -rf $VPN_ACTIVE_PROFILE_FILE
+			exit 0
+			;;
+
+		-s|--status)
+			if [ $(pgrep openvpn) ] && [ -f $VPN_ACTIVE_PROFILE_FILE ] && [ -s $VPN_ACTIVE_PROFILE_FILE ]; then
+				cat $VPN_ACTIVE_PROFILE_FILE
+			fi
+			exit 0
+			;;
+
+		-l|--list)
+			ls $VPN_PROFILES_PATH
+			exit 0
+			;;
+
+		*)
+			break ;;
+	esac
+done
